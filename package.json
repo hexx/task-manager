@@ -9,22 +9,25 @@
     "dev:web": "vite --host 127.0.0.1 --port 5173 --strictPort",
     "dev:worker": "npm run build && wrangler dev --port 8787",
     "dev:e2e": "node scripts/dev-e2e.mjs",
+    "org": "tsx src/org-mode/cli.ts",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "hono": "^4.7.11",
+    "org-toolkit": "github:hexx/org-toolkit",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.52.0",
     "@types/node": "^22.13.10",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
-    "@playwright/test": "^1.52.0",
     "@vitejs/plugin-react": "^4.3.4",
     "concurrently": "^9.1.2",
+    "tsx": "^4.19.2",
     "typescript": "^5.8.3",
     "vite": "^5.4.14",
     "vitest": "^2.1.8",
