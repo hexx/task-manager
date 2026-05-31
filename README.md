@@ -38,3 +38,12 @@ npm run test:e2e
 npm run build
 npm run deploy
 ```
+
+## org-mode utilities
+
+```bash
+npm run org -- import --format json --input input.json --output output.org
+npm run org -- export --format markdown --input input.org --output output.md
+```
+
+The library exports `importToOrg`, `exportFromOrg`, `importFileToOrg`, and `exportFileFromOrg` from `src/org-mode/`.
