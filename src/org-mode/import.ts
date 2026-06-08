@@ -260,7 +260,7 @@ function buildListNodes(lists: ReadonlyArray<OrgListInput> | undefined) {
 }
 
 function buildMetadata(document: OrgImportDocument): Readonly<Record<string, string>> {
-  const metadata = { ...(document.metadata ?? {}) };
+  const metadata = { ...document.metadata };
   if (document.title !== undefined && document.title.trim().length > 0) {
     metadata.TITLE = document.title.trim();
   }
