@@ -55,9 +55,7 @@ export const folderApi = {
 export const taskApi = {
   list: (folderId?: string | null) => {
     const params =
-      folderId !== undefined
-        ? `?folderId=${folderId ?? ''}`
-        : '';
+      folderId != null ? `?folderId=${encodeURIComponent(folderId)}` : '';
     return request<Task[]>(`/api/tasks${params}`);
   },
   create: (input: CreateTaskInput) =>

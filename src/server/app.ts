@@ -36,11 +36,7 @@ api.post('/folders', async (c) => {
     return c.json({ message: 'Folder name is required.' }, 400);
   }
 
-  try {
-    return c.json(createFolder({ name }), 201);
-  } catch {
-    return c.json({ message: 'Folder name is required.' }, 400);
-  }
+  return c.json(createFolder({ name }), 201);
 });
 
 api.patch('/folders/:id', async (c) => {
@@ -93,11 +89,7 @@ api.post('/tasks', async (c) => {
     return c.json({ message: 'Task title is required.' }, 400);
   }
 
-  try {
-    return c.json(createTask({ title, folderId }), 201);
-  } catch {
-    return c.json({ message: 'Task title is required.' }, 400);
-  }
+  return c.json(createTask({ title, folderId }), 201);
 });
 
 api.patch('/tasks/:id', async (c) => {
@@ -109,12 +101,14 @@ api.patch('/tasks/:id', async (c) => {
   const completed =
     typeof body?.completed === 'boolean' ? body.completed : undefined;
   const title = typeof body?.title === 'string' ? body.title : undefined;
-  const folderId =
-    body?.folderId === null
-      ? null
-      : typeof body?.folderId === 'string'
-        ? body.folderId
-        : undefined;
+  let folderId: string | null | undefined;
+  if (body?.folderId === null) {
+    folderId = null;
+  } else if (typeof body?.folderId === 'string') {
+    folderId = body.folderId;
+  } else {
+    folderId = undefined;
+  }
 
   if (title !== undefined && !title.trim()) {
     return c.json({ message: 'Task title is required.' }, 400);

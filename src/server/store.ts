@@ -53,7 +53,7 @@ export function updateFolder(
   const current = folders[index];
   const next: Folder = {
     ...current,
-    name: typeof input.name === 'string' ? input.name.trim() : current.name,
+    name: typeof input.name === 'string' ? (input.name.trim() || current.name) : current.name,
     updatedAt: new Date().toISOString(),
   };
 
@@ -121,7 +121,7 @@ export function updateTask(id: string, input: UpdateTaskInput): Task | null {
   const current = tasks[index];
   const next: Task = {
     ...current,
-    title: typeof input.title === 'string' ? input.title.trim() : current.title,
+    title: typeof input.title === 'string' ? (input.title.trim() || current.title) : current.title,
     completed:
       typeof input.completed === 'boolean' ? input.completed : current.completed,
     folderId: input.folderId !== undefined ? input.folderId : current.folderId,

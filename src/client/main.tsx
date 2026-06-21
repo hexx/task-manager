@@ -39,6 +39,7 @@ function App() {
   );
 
   async function loadFolders() {
+    setError(null);
     try {
       setFolders(await folderApi.list());
     } catch (err) {
@@ -139,9 +140,10 @@ function App() {
       await folderApi.remove(folderId);
       if (selectedFolderId === folderId) {
         setSelectedFolderId(null);
+      } else {
+        await loadTasks();
       }
       await loadFolders();
-      await loadTasks();
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Failed to delete folder.'
