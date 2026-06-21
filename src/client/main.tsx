@@ -2,6 +2,12 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import { taskApi } from './api';
 import type { Task } from '../shared/task';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Trash2Icon } from 'lucide-react';
 import './styles.css';
 
 function App() {
@@ -75,60 +81,83 @@ function App() {
   }
 
   return (
-    <main className="app">
-      <section className="card">
-        <div className="header">
-          <div>
-            <h1>Task Manager</h1>
-            <p>
-              {completedCount}/{totalCount} completed
+    <main className="flex min-h-svh items-start justify-center p-4 pt-12">
+      <Card className="w-full max-w-xl">
+        <CardHeader>
+          <CardTitle>Task Manager</CardTitle>
+          <CardDescription>
+            {completedCount}/{totalCount} completed
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="flex flex-col gap-4">
+          <form onSubmit={handleSubmit}>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="task-title" className="sr-only">
+                  Task title
+                </FieldLabel>
+                <div className="flex gap-2">
+                  <Input
+                    id="task-title"
+                    name="title"
+                    placeholder="Add a new task"
+                    value={title}
+                    onChange={(event) => setTitle(event.target.value)}
+                  />
+                  <Button type="submit" disabled={submitting}>
+                    {submitting ? 'Adding...' : 'Add task'}
+                  </Button>
+                </div>
+                {error ? <FieldError>{error}</FieldError> : null}
+              </Field>
+            </FieldGroup>
+          </form>
+
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Loading tasks...</p>
+          ) : null}
+
+          {!loading && tasks.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No tasks yet. Add one above.
             </p>
-          </div>
-        </div>
+          ) : null}
 
-        <form className="task-form" onSubmit={handleSubmit}>
-          <label className="sr-only" htmlFor="task-title">
-            Task title
-          </label>
-          <input
-            id="task-title"
-            name="title"
-            placeholder="Add a new task"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-          />
-          <button type="submit" disabled={submitting}>
-            {submitting ? 'Adding...' : 'Add task'}
-          </button>
-        </form>
-
-        {error ? <p className="message" role="alert">{error}</p> : null}
-
-        {loading ? <p className="empty-state">Loading tasks...</p> : null}
-
-        {!loading && tasks.length === 0 ? (
-          <p className="empty-state">No tasks yet. Add one above.</p>
-        ) : null}
-
-        <ul className="task-list">
-          {tasks.map((task) => (
-            <li key={task.id} className={`task-item${task.completed ? ' completed' : ''}`}>
-              <div className="content">
-                <input
-                  aria-label={`Mark "${task.title}" as ${task.completed ? 'incomplete' : 'complete'}`}
-                  type="checkbox"
-                  checked={task.completed}
-                  onChange={() => void toggleTask(task)}
-                />
-                <span className="title">{task.title}</span>
-              </div>
-              <button type="button" onClick={() => void removeTask(task.id)}>
-                Delete
-              </button>
-            </li>
-          ))}
-        </ul>
-      </section>
+          <ul className="flex flex-col gap-2">
+            {tasks.map((task) => (
+              <li
+                key={task.id}
+                className="flex items-center justify-between gap-4 rounded-lg border p-3"
+              >
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    checked={task.completed}
+                    aria-label={`Mark "${task.title}" as ${task.completed ? 'incomplete' : 'complete'}`}
+                    onCheckedChange={() => void toggleTask(task)}
+                  />
+                  <span
+                    className={
+                      task.completed
+                        ? 'text-muted-foreground line-through'
+                        : undefined
+                    }
+                  >
+                    {task.title}
+                  </span>
+                </div>
+                <Button
+                  variant="destructive"
+                  size="icon-sm"
+                  onClick={() => void removeTask(task.id)}
+                >
+                  <Trash2Icon />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
     </main>
   );
 }
