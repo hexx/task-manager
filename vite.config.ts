@@ -10,7 +10,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg'],
+      includeAssets: ['icon.svg', 'icon-192.png', 'icon-512.png'],
       manifest: {
         name: 'Task Manager',
         short_name: 'Tasks',
@@ -43,7 +43,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         runtimeCaching: [
           {
-            urlPattern: /^https?:\/\/.*\/api\/.*$/i,
+            urlPattern: /^https?:\/\/[^\/]+\/api\/(?:folders|tasks)(?:\/.*)?$/i,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
