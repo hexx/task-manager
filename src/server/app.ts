@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import type { D1Database } from './types';
 import {
   createFolder,
   createTask,
@@ -16,6 +17,7 @@ type AssetsBinding = {
 
 type Bindings = {
   ASSETS?: AssetsBinding;
+  DB?: D1Database;
 };
 
 export type AppBindings = Bindings;
@@ -24,7 +26,10 @@ const api = new Hono<{ Bindings: AppBindings }>();
 
 // Folder endpoints
 
-api.get('/folders', (c) => c.json(listFolders()));
+api.get('/folders', async (c) => {
+  const result = listFolders(c.env?.DB);
+  return c.json(result instanceof Promise ? await result : result);
+});
 
 api.post('/folders', async (c) => {
   const body = (await c.req.json().catch(() => null)) as {
@@ -36,7 +41,8 @@ api.post('/folders', async (c) => {
     return c.json({ message: 'Folder name is required.' }, 400);
   }
 
-  return c.json(createFolder({ name }), 201);
+  const result = createFolder(c.env?.DB, { name });
+  return c.json(result instanceof Promise ? await result : result, 201);
 });
 
 api.patch('/folders/:id', async (c) => {
@@ -49,7 +55,8 @@ api.patch('/folders/:id', async (c) => {
     return c.json({ message: 'Folder name is required.' }, 400);
   }
 
-  const folder = updateFolder(c.req.param('id'), { name });
+  const result = updateFolder(c.env?.DB, c.req.param('id'), { name });
+  const folder = result instanceof Promise ? await result : result;
   if (!folder) {
     return c.json({ message: 'Folder not found.' }, 404);
   }
@@ -57,8 +64,9 @@ api.patch('/folders/:id', async (c) => {
   return c.json(folder);
 });
 
-api.delete('/folders/:id', (c) => {
-  const removed = deleteFolder(c.req.param('id'));
+api.delete('/folders/:id', async (c) => {
+  const result = deleteFolder(c.env?.DB, c.req.param('id'));
+  const removed = result instanceof Promise ? await result : result;
   if (!removed) {
     return c.json({ message: 'Folder not found.' }, 404);
   }
@@ -68,12 +76,13 @@ api.delete('/folders/:id', (c) => {
 
 // Task endpoints
 
-api.get('/tasks', (c) => {
+api.get('/tasks', async (c) => {
   const folderId = c.req.query('folderId');
-  if (folderId !== undefined) {
-    return c.json(listTasks(folderId === '' ? null : folderId));
-  }
-  return c.json(listTasks());
+  const result =
+    folderId !== undefined
+      ? listTasks(c.env?.DB, folderId === '' ? null : folderId)
+      : listTasks(c.env?.DB);
+  return c.json(result instanceof Promise ? await result : result);
 });
 
 api.post('/tasks', async (c) => {
@@ -89,7 +98,8 @@ api.post('/tasks', async (c) => {
     return c.json({ message: 'Task title is required.' }, 400);
   }
 
-  return c.json(createTask({ title, folderId }), 201);
+  const result = createTask(c.env?.DB, { title, folderId });
+  return c.json(result instanceof Promise ? await result : result, 201);
 });
 
 api.patch('/tasks/:id', async (c) => {
@@ -114,11 +124,12 @@ api.patch('/tasks/:id', async (c) => {
     return c.json({ message: 'Task title is required.' }, 400);
   }
 
-  const task = updateTask(c.req.param('id'), {
+  const result = updateTask(c.env?.DB, c.req.param('id'), {
     title,
     completed,
     folderId,
   });
+  const task = result instanceof Promise ? await result : result;
   if (!task) {
     return c.json({ message: 'Task not found.' }, 404);
   }
@@ -126,8 +137,9 @@ api.patch('/tasks/:id', async (c) => {
   return c.json(task);
 });
 
-api.delete('/tasks/:id', (c) => {
-  const removed = deleteTask(c.req.param('id'));
+api.delete('/tasks/:id', async (c) => {
+  const result = deleteTask(c.env?.DB, c.req.param('id'));
+  const removed = result instanceof Promise ? await result : result;
   if (!removed) {
     return c.json({ message: 'Task not found.' }, 404);
   }
