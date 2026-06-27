@@ -10,28 +10,68 @@ import type {
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...init?.headers,
-    },
-    ...init,
-  });
+  const shouldReload = (): boolean => {
+    const lastReload = sessionStorage.getItem('lastReload');
+    if (lastReload) {
+      const elapsed = Date.now() - parseInt(lastReload, 10);
+      if (elapsed < 60000) { // 1分以内にリロード済み
+        return false;
+      }
+    }
+    return true;
+  };
 
-  if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as {
-      message?: string;
-    } | null;
-    throw new Error(
-      payload?.message ?? `Request failed with ${response.status}.`
-    );
+  const reloadPage = () => {
+    if (shouldReload()) {
+      sessionStorage.setItem('lastReload', Date.now().toString());
+      window.location.reload();
+    }
+  };
+
+  try {
+    const response = await fetch(`${apiBaseUrl}${path}`, {
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...init?.headers,
+      },
+      ...init,
+    });
+
+    // ステータスコードがCloudflareのログインページが返されたと推測される場合
+    if (response.status === 401 || response.status === 403 || response.status >= 500) {
+      reloadPage();
+      throw new Error(`Request failed with ${response.status}.`);
+    }
+
+    // Content-TypeがHTMLである場合（Cloudflareのログインページ）
+    const contentType = response.headers.get('Content-Type');
+    if (contentType && contentType.includes('text/html')) {
+      reloadPage();
+      throw new Error('Unexpected HTML response, possibly Cloudflare login page.');
+    }
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as {
+        message?: string;
+      } | null;
+      throw new Error(
+        payload?.message ?? `Request failed with ${response.status}.`
+      );
+    }
+
+    if (response.status === 204) {
+      return undefined as T;
+    }
+
+    return (await response.json()) as T;
+  } catch (error) {
+    // ネットワークエラー (TypeError: Failed to fetch 等)
+    if (error instanceof TypeError) {
+      reloadPage();
+    }
+    throw error;
   }
-
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  return (await response.json()) as T;
 }
 
 export const folderApi = {
