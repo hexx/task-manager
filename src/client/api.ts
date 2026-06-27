@@ -13,8 +13,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const shouldReload = (): boolean => {
     const lastReload = sessionStorage.getItem('lastReload');
     if (lastReload) {
-      const elapsed = Date.now() - parseInt(lastReload, 10);
-      if (elapsed < 60000) { // 1分以内にリロード済み
+      const lastTime = parseInt(lastReload, 10);
+      if (isNaN(lastTime) || Date.now() - lastTime < 60000) { // 1分以内にリロード済み
         return false;
       }
     }
@@ -39,7 +39,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     });
 
     // ステータスコードがCloudflareのログインページが返されたと推測される場合
-    if (response.status === 401 || response.status === 403 || response.status >= 500) {
+    if (response.status === 401 || response.status === 403) {
       reloadPage();
       throw new Error(`Request failed with ${response.status}.`);
     }
