@@ -40,8 +40,15 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        globPatterns: ['**/*.{js,css,svg,png,woff2}'],
         runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'pages-cache',
+            },
+          },
           {
             urlPattern: /^https?:\/\/[^/]+\/api\/(?:folders|tasks)(?:\/.*)?$/i,
             handler: 'NetworkFirst',
