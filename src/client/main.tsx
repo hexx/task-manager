@@ -31,11 +31,16 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showFolderForm, setShowFolderForm] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(false);
 
   const totalCount = tasks.length;
   const completedCount = useMemo(
     () => tasks.filter((task) => task.completed).length,
     [tasks]
+  );
+  const visibleTasks = useMemo(
+    () => (showCompleted ? tasks : tasks.filter((task) => !task.completed)),
+    [tasks, showCompleted]
   );
 
   async function loadFolders() {
@@ -238,15 +243,25 @@ function App() {
                   {completedCount}/{totalCount} completed
                 </CardDescription>
               </div>
-              {/* Folder add button - mobile only */}
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                className="md:hidden"
-                onClick={() => setShowFolderForm(!showFolderForm)}
-              >
-                {showFolderForm ? <XIcon /> : <FolderPlusIcon />}
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  className="hidden md:inline-flex"
+                  onClick={() => setShowCompleted(!showCompleted)}
+                >
+                  {showCompleted ? '完了を隠す' : '完了を表示'}
+                </Button>
+                {/* Folder add button - mobile only */}
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="md:hidden"
+                  onClick={() => setShowFolderForm(!showFolderForm)}
+                >
+                  {showFolderForm ? <XIcon /> : <FolderPlusIcon />}
+                </Button>
+              </div>
             </div>
           </CardHeader>
 
@@ -351,9 +366,14 @@ function App() {
                 No tasks yet. Add one above.
               </p>
             ) : null}
+            {!loading && tasks.length > 0 && visibleTasks.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                All tasks completed.
+              </p>
+            ) : null}
 
             <ul className="flex flex-col gap-2">
-              {tasks.map((task) => (
+              {visibleTasks.map((task) => (
                 <li
                   key={task.id}
                   className="flex items-center justify-between gap-4 rounded-lg border p-3"
