@@ -139,6 +139,17 @@ function App() {
     }
   }
 
+  async function moveTaskToFolder(task: Task, folderId: string | null) {
+    if (task.folderId === folderId) return;
+    setError(null);
+    try {
+      await taskApi.update(task.id, { folderId });
+      await loadTasks();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to move task.');
+    }
+  }
+
   async function removeFolder(folderId: string) {
     setError(null);
     try {
@@ -376,9 +387,9 @@ function App() {
               {visibleTasks.map((task) => (
                 <li
                   key={task.id}
-                  className="flex items-center justify-between gap-4 rounded-lg border p-3"
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
                     <Checkbox
                       checked={task.completed}
                       aria-label={`Mark "${task.title}" as ${
@@ -396,13 +407,33 @@ function App() {
                       {task.title}
                     </span>
                   </div>
-                  <Button
-                    variant="destructive"
-                    size="icon-sm"
-                    onClick={() => void removeTask(task.id)}
-                  >
-                    <Trash2Icon />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <select
+                      aria-label={`Move "${task.title}" to folder`}
+                      value={task.folderId ?? ''}
+                      onChange={(event) =>
+                        void moveTaskToFolder(
+                          task,
+                          event.target.value || null
+                        )
+                      }
+                      className="h-8 max-w-[12rem] truncate rounded-lg border border-input bg-transparent px-2 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    >
+                      <option value="">未分類</option>
+                      {folders.map((folder) => (
+                        <option key={folder.id} value={folder.id}>
+                          {folder.name}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      variant="destructive"
+                      size="icon-sm"
+                      onClick={() => void removeTask(task.id)}
+                    >
+                      <Trash2Icon />
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
