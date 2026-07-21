@@ -19,7 +19,10 @@ import {
   FieldLabel,
 } from '@/components/ui/field';
 import { FolderIcon, FolderPlusIcon, Trash2Icon, XIcon } from 'lucide-react';
+import { ChecklistsView } from './ChecklistsView';
 import './styles.css';
+
+type View = 'tasks' | 'checklists';
 
 function App() {
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -32,6 +35,7 @@ function App() {
   const [submitting, setSubmitting] = useState(false);
   const [showFolderForm, setShowFolderForm] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [view, setView] = useState<View>('tasks');
 
   const totalCount = tasks.length;
   const completedCount = useMemo(
@@ -171,7 +175,43 @@ function App() {
 
   return (
     <main className="flex min-h-svh items-start justify-center p-4 pt-12">
-      <div className="flex w-full max-w-3xl flex-col gap-4 md:flex-row">
+      <div className="flex w-full max-w-3xl flex-col gap-4">
+        {/* View switcher */}
+        <div
+          className="flex w-fit gap-1 rounded-lg border bg-muted/50 p-1"
+          role="tablist"
+          aria-label="View"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === 'tasks'}
+            className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
+              view === 'tasks'
+                ? 'bg-background font-medium shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+            onClick={() => setView('tasks')}
+          >
+            Tasks
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === 'checklists'}
+            className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
+              view === 'checklists'
+                ? 'bg-background font-medium shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+            onClick={() => setView('checklists')}
+          >
+            Checklists
+          </button>
+        </div>
+
+        {view === 'checklists' ? <ChecklistsView /> : (
+        <div className="flex w-full flex-col gap-4 md:flex-row">
         {/* Folder sidebar - desktop only */}
         <Card className="hidden w-56 shrink-0 md:flex">
           <CardHeader>
@@ -439,6 +479,8 @@ function App() {
             </ul>
           </CardContent>
         </Card>
+        </div>
+        )}
       </div>
     </main>
   );

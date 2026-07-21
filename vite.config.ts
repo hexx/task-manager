@@ -75,8 +75,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['tests/**/*.test.ts'],
-    exclude: ['playwright/**']
+    include: ['tests/**/*.test.ts']
   },
   server: {
     host: '127.0.0.1',
