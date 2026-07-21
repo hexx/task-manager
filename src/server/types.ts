@@ -10,7 +10,8 @@ export type D1PreparedStatement = {
   run(): Promise<D1Result>;
 };
 
-export type D1Result = {
+export type D1Result<T = Record<string, unknown>> = {
   success: boolean;
   meta: { changes: number };
+  results: T[];
 };

@@ -1,4 +1,13 @@
 import type {
+  CreateChecklistInput,
+  CreateChecklistItemInput,
+  Checklist,
+  ChecklistItem,
+  ChecklistWithItems,
+  UpdateChecklistInput,
+  UpdateChecklistItemInput,
+} from '../shared/checklist';
+import type {
   CreateFolderInput,
   CreateTaskInput,
   Folder,
@@ -111,5 +120,41 @@ export const taskApi = {
   remove: (id: string) =>
     request<void>(`/api/tasks/${id}`, {
       method: 'DELETE',
+    }),
+};
+
+export const checklistApi = {
+  list: () => request<ChecklistWithItems[]>('/api/checklists'),
+  create: (input: CreateChecklistInput) =>
+    request<ChecklistWithItems>('/api/checklists', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  update: (id: string, input: UpdateChecklistInput) =>
+    request<Checklist>(`/api/checklists/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }),
+  remove: (id: string) =>
+    request<void>(`/api/checklists/${id}`, {
+      method: 'DELETE',
+    }),
+  createItem: (checklistId: string, input: CreateChecklistItemInput) =>
+    request<ChecklistItem>(`/api/checklists/${checklistId}/items`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  updateItem: (checklistId: string, itemId: string, input: UpdateChecklistItemInput) =>
+    request<ChecklistItem>(`/api/checklists/${checklistId}/items/${itemId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }),
+  removeItem: (checklistId: string, itemId: string) =>
+    request<void>(`/api/checklists/${checklistId}/items/${itemId}`, {
+      method: 'DELETE',
+    }),
+  reset: (checklistId: string) =>
+    request<void>(`/api/checklists/${checklistId}/reset`, {
+      method: 'POST',
     }),
 };

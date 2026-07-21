@@ -15,6 +15,14 @@ npm run dev
 - `POST /api/tasks`
 - `PATCH /api/tasks/:id`
 - `DELETE /api/tasks/:id`
+- `GET /api/checklists`
+- `POST /api/checklists`
+- `PATCH /api/checklists/:id`
+- `DELETE /api/checklists/:id`
+- `POST /api/checklists/:id/items`
+- `PATCH /api/checklists/:id/items/:itemId`
+- `DELETE /api/checklists/:id/items/:itemId`
+- `POST /api/checklists/:id/reset`
 
 ## Frontend
 
@@ -24,12 +32,12 @@ The React UI fetches the REST API and supports:
 - adding tasks
 - toggling completed state
 - deleting tasks
+- reusable checklists (create, add/check/rename/delete items, reset all checks)
 
 ## Tests
 
 ```bash
 npm test
-npm run test:e2e
 ```
 
 ## Deploy
