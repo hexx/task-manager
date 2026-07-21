@@ -431,29 +431,33 @@ export function ChecklistsView() {
                 </>
               )}
             </div>
-            {selectedChecklist && !renaming ? (
+            {!renaming ? (
               <div className="flex shrink-0 items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => {
-                    setRenameDraft(selectedChecklist.name);
-                    setRenaming(true);
-                  }}
-                  aria-label={`Rename checklist "${selectedChecklist.name}"`}
-                >
-                  <PencilIcon />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => void handleReset()}
-                  aria-label="Reset checklist"
-                >
-                  <RotateCcwIcon />
-                  Reset
-                </Button>
-                {/* Checklist add button - mobile only */}
+                {selectedChecklist ? (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => {
+                        setRenameDraft(selectedChecklist.name);
+                        setRenaming(true);
+                      }}
+                      aria-label={`Rename checklist "${selectedChecklist.name}"`}
+                    >
+                      <PencilIcon />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void handleReset()}
+                      aria-label="Reset checklist"
+                    >
+                      <RotateCcwIcon />
+                      Reset
+                    </Button>
+                  </>
+                ) : null}
+                {/* Checklist add button - mobile only (always visible, even with no checklists) */}
                 <Button
                   variant="ghost"
                   size="icon-xs"
