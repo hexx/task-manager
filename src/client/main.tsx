@@ -25,6 +25,22 @@ import './styles.css';
 
 type View = 'tasks' | 'checklists';
 
+function DeadlineLabel({ deadline, completed }: { deadline: string; completed: boolean }) {
+  const display = formatDeadline(deadline);
+  const showOverdue = display.overdue && !completed;
+  return (
+    <span
+      className={`whitespace-nowrap text-xs ${
+        showOverdue
+          ? 'font-medium text-destructive'
+          : 'text-muted-foreground'
+      }`}
+    >
+      {display.relative} ({display.absolute})
+    </span>
+  );
+}
+
 function App() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -161,10 +177,10 @@ function App() {
     }
   }
 
-  async function updateDeadline(task: Task, deadline: string) {
+  async function updateDeadline(task: Task, deadlineValue: string) {
     setError(null);
     try {
-      await taskApi.update(task.id, { deadline: deadline || null });
+      await taskApi.update(task.id, { deadline: deadlineValue || null });
       await loadTasks();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update task.');
@@ -473,21 +489,12 @@ function App() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    {task.deadline ? (() => {
-                      const display = formatDeadline(task.deadline);
-                      const showOverdue = display.overdue && !task.completed;
-                      return (
-                        <span
-                          className={`whitespace-nowrap text-xs ${
-                            showOverdue
-                              ? 'font-medium text-destructive'
-                              : 'text-muted-foreground'
-                          }`}
-                        >
-                          {display.relative} ({display.absolute})
-                        </span>
-                      );
-                    })() : null}
+                    {task.deadline ? (
+                      <DeadlineLabel
+                        deadline={task.deadline}
+                        completed={task.completed}
+                      />
+                    ) : null}
                     <input
                       type="date"
                       aria-label={`Deadline for "${task.title}"`}

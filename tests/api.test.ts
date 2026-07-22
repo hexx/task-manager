@@ -89,10 +89,10 @@ describe('task API', () => {
     expect(((await clearResponse.json()) as { deadline: string | null }).deadline).toBeNull();
 
     // deadline 未指定の PATCH では変更されない
-    const createWithDeadline = (await app.request('http://localhost/api/tasks', {
+    const createWithDeadline = (await (await app.request('http://localhost/api/tasks', {
       method: 'POST',
       body: JSON.stringify({ title: 'Keep deadline', deadline: '2026-08-01' })
-    }).then((r) => r.json())) as { id: string };
+    })).json()) as { id: string };
     const noChangeResponse = await app.request(`http://localhost/api/tasks/${createWithDeadline.id}`, {
       method: 'PATCH',
       body: JSON.stringify({ completed: true })
