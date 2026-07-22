@@ -41,6 +41,7 @@ function rowToTask(row: Record<string, unknown>): Task {
     title: row.title as string,
     completed: Boolean(row.completed),
     folderId: (row.folder_id as string) || null,
+    deadline: (row.deadline as string) || null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -211,6 +212,7 @@ export function createTask(
 
   const id = crypto.randomUUID();
   const folderId = input.folderId ?? null;
+  const deadline = input.deadline ?? null;
   const now = new Date().toISOString();
 
   if (!db) {
@@ -219,6 +221,7 @@ export function createTask(
       title,
       completed: false,
       folderId,
+      deadline,
       createdAt: now,
       updatedAt: now,
     };
@@ -228,15 +231,16 @@ export function createTask(
 
   return db
     .prepare(
-      'INSERT INTO tasks (id, title, completed, folder_id, created_at, updated_at) VALUES (?, ?, 0, ?, ?, ?)'
+      'INSERT INTO tasks (id, title, completed, folder_id, deadline, created_at, updated_at) VALUES (?, ?, 0, ?, ?, ?, ?)'
     )
-    .bind(id, title, folderId, now, now)
+    .bind(id, title, folderId, deadline, now, now)
     .run()
     .then(() => ({
       id,
       title,
       completed: false,
       folderId,
+      deadline,
       createdAt: now,
       updatedAt: now,
     }))
@@ -267,6 +271,7 @@ export function updateTask(
           ? input.completed
           : current.completed,
       folderId: input.folderId !== undefined ? input.folderId : current.folderId,
+      deadline: input.deadline !== undefined ? input.deadline : current.deadline,
       updatedAt: new Date().toISOString(),
     };
     tasks = [...tasks.slice(0, index), next, ...tasks.slice(index + 1)];
@@ -280,6 +285,7 @@ export function updateTask(
        SET title = COALESCE(?, title),
            completed = COALESCE(?, completed),
            folder_id = CASE WHEN ? = 1 THEN ? ELSE folder_id END,
+           deadline = CASE WHEN ? = 1 THEN ? ELSE deadline END,
            updated_at = ?
        WHERE id = ?
        RETURNING *`
@@ -289,6 +295,8 @@ export function updateTask(
       input.completed !== undefined ? (input.completed ? 1 : 0) : null,
       input.folderId !== undefined ? 1 : 0,
       input.folderId ?? null,
+      input.deadline !== undefined ? 1 : 0,
+      input.deadline ?? null,
       now,
       id
     )

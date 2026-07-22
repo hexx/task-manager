@@ -19,5 +19,13 @@ _Avoid_: テンプレート, パッキングリスト, todo リスト
 Checklist を構成する個々の項目。タイトルのみを持ち（Task と同じ）、チェック済み / 未チェックの単一状態を持つ。
 _Avoid_: subtask, チェック項目
 
+**Deadline**:
+Task に設定できる任意の〆切。日付（時刻なし）で表し、「この日までに完了したい」を示す。Checklist / ChecklistItem は持たず、Task のみが持つ。
+_Avoid_: due date, 期限, 期日
+
+**Overdue**:
+未完了の Task がその Deadline を過ぎた状態。保存される状態ではなく「今日の日付 > Deadline かつ未完了」から導出される派生値。一覧上で視覚的に強調されるが、Task の状態は増えない。
+_Avoid_: 延滞, late
+
 **Reset**:
 Checklist の全項目のチェック状態を未チェックに戻す操作。いつでも実行でき、Checklist を再利用する唯一の手段。項目のチェックは個別に何度でも付け外しできる。

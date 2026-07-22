@@ -62,6 +62,75 @@ describe('task API', () => {
     expect(await response.json()).toEqual({ message: 'Task title is required.' });
   });
 
+  it('creates a task with a deadline and updates/clears it', async () => {
+    const createResponse = await app.request('http://localhost/api/tasks', {
+      method: 'POST',
+      body: JSON.stringify({ title: 'With deadline', deadline: '2026-08-01' })
+    });
+
+    expect(createResponse.status).toBe(201);
+    const created = (await createResponse.json()) as { id: string; deadline: string | null };
+    expect(created.deadline).toBe('2026-08-01');
+
+    // 別の日に更新
+    const updateResponse = await app.request(`http://localhost/api/tasks/${created.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ deadline: '2026-09-15' })
+    });
+    expect(updateResponse.status).toBe(200);
+    expect(((await updateResponse.json()) as { deadline: string | null }).deadline).toBe('2026-09-15');
+
+    // null で消去
+    const clearResponse = await app.request(`http://localhost/api/tasks/${created.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ deadline: null })
+    });
+    expect(clearResponse.status).toBe(200);
+    expect(((await clearResponse.json()) as { deadline: string | null }).deadline).toBeNull();
+
+    // deadline 未指定の PATCH では変更されない
+    const createWithDeadline = (await (await app.request('http://localhost/api/tasks', {
+      method: 'POST',
+      body: JSON.stringify({ title: 'Keep deadline', deadline: '2026-08-01' })
+    })).json()) as { id: string };
+    const noChangeResponse = await app.request(`http://localhost/api/tasks/${createWithDeadline.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ completed: true })
+    });
+    expect(((await noChangeResponse.json()) as { deadline: string | null }).deadline).toBe('2026-08-01');
+  });
+
+  it('allows past dates as deadlines', async () => {
+    const response = await app.request('http://localhost/api/tasks', {
+      method: 'POST',
+      body: JSON.stringify({ title: 'Overdue task', deadline: '2020-01-01' })
+    });
+
+    expect(response.status).toBe(201);
+    expect(((await response.json()) as { deadline: string | null }).deadline).toBe('2020-01-01');
+  });
+
+  it('rejects malformed deadlines', async () => {
+    for (const bad of ['tomorrow', '2026/08/01', '2026-8-1']) {
+      const response = await app.request('http://localhost/api/tasks', {
+        method: 'POST',
+        body: JSON.stringify({ title: 'Bad deadline', deadline: bad })
+      });
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ message: 'Deadline must be a YYYY-MM-DD date.' });
+    }
+  });
+
+  it('creates a task without a deadline (deadline is null)', async () => {
+    const response = await app.request('http://localhost/api/tasks', {
+      method: 'POST',
+      body: JSON.stringify({ title: 'No deadline' })
+    });
+
+    expect(response.status).toBe(201);
+    expect(((await response.json()) as { deadline: string | null }).deadline).toBeNull();
+  });
+
   it('moves a task to another folder via folderId update', async () => {
     const folderResponse = await app.request('http://localhost/api/folders', {
       method: 'POST',

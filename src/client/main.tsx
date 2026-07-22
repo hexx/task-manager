@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import { folderApi, taskApi } from './api';
 import type { Folder, Task } from '../shared/task';
+import { formatDeadline } from '../shared/deadline';
 import {
   Card,
   CardContent,
@@ -24,11 +25,28 @@ import './styles.css';
 
 type View = 'tasks' | 'checklists';
 
+function DeadlineLabel({ deadline, completed }: { deadline: string; completed: boolean }) {
+  const display = formatDeadline(deadline);
+  const showOverdue = display.overdue && !completed;
+  return (
+    <span
+      className={`whitespace-nowrap text-xs ${
+        showOverdue
+          ? 'font-medium text-destructive'
+          : 'text-muted-foreground'
+      }`}
+    >
+      {display.relative} ({display.absolute})
+    </span>
+  );
+}
+
 function App() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
+  const [deadline, setDeadline] = useState('');
   const [folderName, setFolderName] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -89,8 +107,13 @@ function App() {
     setSubmitting(true);
     setError(null);
     try {
-      await taskApi.create({ title: nextTitle, folderId: selectedFolderId });
+      await taskApi.create({
+        title: nextTitle,
+        folderId: selectedFolderId,
+        deadline: deadline || undefined,
+      });
       setTitle('');
+      setDeadline('');
       await loadTasks();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create task.');
@@ -151,6 +174,16 @@ function App() {
       await loadTasks();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to move task.');
+    }
+  }
+
+  async function updateDeadline(task: Task, deadlineValue: string) {
+    setError(null);
+    try {
+      await taskApi.update(task.id, { deadline: deadlineValue || null });
+      await loadTasks();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update task.');
     }
   }
 
@@ -397,6 +430,14 @@ function App() {
                       value={title}
                       onChange={(event) => setTitle(event.target.value)}
                     />
+                    <Input
+                      type="date"
+                      name="deadline"
+                      aria-label="Deadline"
+                      value={deadline}
+                      onChange={(event) => setDeadline(event.target.value)}
+                      className="w-auto"
+                    />
                     <Button type="submit" disabled={submitting}>
                       {submitting ? 'Adding...' : 'Add task'}
                     </Button>
@@ -448,6 +489,21 @@ function App() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
+                    {task.deadline ? (
+                      <DeadlineLabel
+                        deadline={task.deadline}
+                        completed={task.completed}
+                      />
+                    ) : null}
+                    <input
+                      type="date"
+                      aria-label={`Deadline for "${task.title}"`}
+                      value={task.deadline ?? ''}
+                      onChange={(event) =>
+                        void updateDeadline(task, event.target.value)
+                      }
+                      className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    />
                     <select
                       aria-label={`Move "${task.title}" to folder`}
                       value={task.folderId ?? ''}
