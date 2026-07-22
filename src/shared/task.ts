@@ -10,6 +10,7 @@ export interface Task {
   title: string;
   completed: boolean;
   folderId: string | null;
+  deadline: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -25,10 +26,13 @@ export interface UpdateFolderInput {
 export interface CreateTaskInput {
   title: string;
   folderId?: string | null;
+  deadline?: string;
 }
 
 export interface UpdateTaskInput {
   title?: string;
   completed?: boolean;
   folderId?: string | null;
+  /** undefined = 変更なし / null = 消去 / string = 設定 */
+  deadline?: string | null;
 }

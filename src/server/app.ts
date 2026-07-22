@@ -31,6 +31,8 @@ type Bindings = {
 
 export type AppBindings = Bindings;
 
+const DEADLINE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
 const api = new Hono<{ Bindings: AppBindings }>();
 
 // Folder endpoints
@@ -98,16 +100,23 @@ api.post('/tasks', async (c) => {
   const body = (await c.req.json().catch(() => null)) as {
     title?: unknown;
     folderId?: unknown;
+    deadline?: unknown;
   } | null;
   const title = typeof body?.title === 'string' ? body.title : '';
   const folderId =
     typeof body?.folderId === 'string' ? body.folderId : null;
+  const deadline =
+    typeof body?.deadline === 'string' ? body.deadline : undefined;
 
   if (!title.trim()) {
     return c.json({ message: 'Task title is required.' }, 400);
   }
 
-  const result = createTask(c.env?.DB, { title, folderId });
+  if (deadline !== undefined && !DEADLINE_PATTERN.test(deadline)) {
+    return c.json({ message: 'Deadline must be a YYYY-MM-DD date.' }, 400);
+  }
+
+  const result = createTask(c.env?.DB, { title, folderId, deadline });
   return c.json(result instanceof Promise ? await result : result, 201);
 });
 
@@ -116,6 +125,7 @@ api.patch('/tasks/:id', async (c) => {
     title?: unknown;
     completed?: unknown;
     folderId?: unknown;
+    deadline?: unknown;
   } | null;
   const completed =
     typeof body?.completed === 'boolean' ? body.completed : undefined;
@@ -128,15 +138,28 @@ api.patch('/tasks/:id', async (c) => {
   } else {
     folderId = undefined;
   }
+  let deadline: string | null | undefined;
+  if (body?.deadline === null) {
+    deadline = null;
+  } else if (typeof body?.deadline === 'string') {
+    deadline = body.deadline;
+  } else {
+    deadline = undefined;
+  }
 
   if (title !== undefined && !title.trim()) {
     return c.json({ message: 'Task title is required.' }, 400);
+  }
+
+  if (typeof deadline === 'string' && !DEADLINE_PATTERN.test(deadline)) {
+    return c.json({ message: 'Deadline must be a YYYY-MM-DD date.' }, 400);
   }
 
   const result = updateTask(c.env?.DB, c.req.param('id'), {
     title,
     completed,
     folderId,
+    deadline,
   });
   const task = result instanceof Promise ? await result : result;
   if (!task) {
