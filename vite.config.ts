@@ -10,6 +10,9 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Cloudflare Access 保護下で manifest fetch に CF_Authorization クッキーを同梱させる。
+      // 削除すると本番でサイレントに再発する（docs/adr/0001 参照）。
+      useCredentials: true,
       includeAssets: ['icon.svg', 'icon-192.png', 'icon-512.png'],
       manifest: {
         name: 'Task Manager',
