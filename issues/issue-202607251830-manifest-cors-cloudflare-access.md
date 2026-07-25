@@ -1,6 +1,6 @@
 ---
 title: "Cloudflare Access 保護下で manifest.webmanifest 取得が CORS ブロックされる問題の修正"
-status: TODO
+status: DONE
 created: 2026-07-25T18:30:00+09:00
 ---
 
