@@ -23,6 +23,11 @@ npm run dev
 - `PATCH /api/checklists/:id/items/:itemId`
 - `DELETE /api/checklists/:id/items/:itemId`
 - `POST /api/checklists/:id/reset`
+- `GET /api/accounts`
+- `POST /api/accounts`
+- `PATCH /api/accounts/:id`
+- `DELETE /api/accounts/:id`
+- `POST /api/accounts/:id/mark-as-read`
 
 ## Frontend
 

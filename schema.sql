@@ -42,3 +42,12 @@ CREATE TABLE IF NOT EXISTS checklist_items (
 
 -- Index for faster lookups by checklist_id
 CREATE INDEX IF NOT EXISTS idx_checklist_items_checklist_id ON checklist_items(checklist_id);
+
+-- Twitter accounts table (LastRead: docs/twitter-spec.md)
+CREATE TABLE IF NOT EXISTS twitter_accounts (
+  id TEXT PRIMARY KEY,
+  handle TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  last_read_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

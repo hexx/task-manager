@@ -1,16 +1,23 @@
 import { Hono } from 'hono';
+import { normalizeHandle } from '../shared/account';
 import type { D1Database } from './types';
 import {
+  createAccount,
   createChecklist,
   createChecklistItem,
   createFolder,
   createTask,
   deleteChecklist,
+  deleteAccount,
   deleteChecklistItem,
   deleteFolder,
   deleteTask,
   getChecklist,
   listChecklists,
+  listAccounts,
+  findAccountByHandle,
+  markAccountAsRead,
+  updateAccount,
   listFolders,
   listTasks,
   resetChecklistItems,
@@ -300,10 +307,122 @@ api.post('/checklists/:id/reset', async (c) => {
   return c.body(null, 204);
 });
 
+// Account (Twitter) endpoints
+
+const LAST_READ_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+
+api.get('/accounts', async (c) => {
+  const result = listAccounts(c.env?.DB);
+  return c.json(result instanceof Promise ? await result : result);
+});
+
+api.post('/accounts', async (c) => {
+  const body = (await c.req.json().catch(() => null)) as {
+    handle?: unknown;
+  } | null;
+  const handle = typeof body?.handle === 'string' ? body.handle : '';
+
+  if (!handle.trim()) {
+    return c.json({ message: 'Handle is required.' }, 400);
+  }
+
+  const normalized = normalizeHandle(handle);
+  if (!normalized) {
+    return c.json({ message: 'Invalid handle.' }, 400);
+  }
+
+  const existing = findAccountByHandle(c.env?.DB, normalized);
+  if (existing instanceof Promise ? await existing : existing) {
+    return c.json({ message: 'Handle already exists.' }, 400);
+  }
+
+  const result = createAccount(c.env?.DB, { handle: normalized });
+  return c.json(result instanceof Promise ? await result : result, 201);
+});
+
+api.patch('/accounts/:id', async (c) => {
+  const body = (await c.req.json().catch(() => null)) as {
+    handle?: unknown;
+    lastReadAt?: unknown;
+  } | null;
+  const handle =
+    typeof body?.handle === 'string' ? body.handle : undefined;
+  let lastReadAt: string | null | undefined;
+  if (body?.lastReadAt === null) {
+    lastReadAt = null;
+  } else if (typeof body?.lastReadAt === 'string') {
+    lastReadAt = body.lastReadAt;
+  } else {
+    lastReadAt = undefined;
+  }
+
+  if (handle !== undefined && !handle.trim()) {
+    return c.json({ message: 'Handle is required.' }, 400);
+  }
+
+  let normalized: string | undefined;
+  if (handle !== undefined) {
+    const n = normalizeHandle(handle);
+    if (!n) {
+      return c.json({ message: 'Invalid handle.' }, 400);
+    }
+    normalized = n;
+  }
+
+  if (
+    typeof lastReadAt === 'string' &&
+    (!LAST_READ_PATTERN.test(lastReadAt) ||
+      Number.isNaN(Date.parse(lastReadAt)))
+  ) {
+    return c.json({ message: 'lastReadAt must be an ISO datetime.' }, 400);
+  }
+
+  if (normalized !== undefined) {
+    const existing = findAccountByHandle(
+      c.env?.DB,
+      normalized,
+      c.req.param('id')
+    );
+    if (existing instanceof Promise ? await existing : existing) {
+      return c.json({ message: 'Handle already exists.' }, 400);
+    }
+  }
+
+  const result = updateAccount(c.env?.DB, c.req.param('id'), {
+    handle: normalized,
+    lastReadAt,
+  });
+  const account = result instanceof Promise ? await result : result;
+  if (!account) {
+    return c.json({ message: 'Account not found.' }, 404);
+  }
+
+  return c.json(account);
+});
+
+api.delete('/accounts/:id', async (c) => {
+  const result = deleteAccount(c.env?.DB, c.req.param('id'));
+  const removed = result instanceof Promise ? await result : result;
+  if (!removed) {
+    return c.json({ message: 'Account not found.' }, 404);
+  }
+
+  return c.body(null, 204);
+});
+
+api.post('/accounts/:id/mark-as-read', async (c) => {
+  const result = markAccountAsRead(c.env?.DB, c.req.param('id'));
+  const account = result instanceof Promise ? await result : result;
+  if (!account) {
+    return c.json({ message: 'Account not found.' }, 404);
+  }
+
+  return c.json(account);
+});
+
 const app = new Hono<{ Bindings: AppBindings }>();
 
 app.route('/api', api);
-
 app.get('*', async (c) => {
   if (!c.env.ASSETS) {
     return c.text('Task Manager API is running.', 200);
