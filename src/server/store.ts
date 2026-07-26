@@ -1,4 +1,10 @@
 import type {
+  CreateAccountInput,
+  Account,
+  UpdateAccountInput,
+} from '../shared/account';
+import { handleKey, normalizeHandle } from '../shared/account';
+import type {
   CreateChecklistInput,
   CreateChecklistItemInput,
   Checklist,
@@ -692,6 +698,218 @@ export function resetChecklistItems(
     .then(([existsResult]) => existsResult.results.length > 0)
     .catch((err) => {
       console.error('Failed to reset checklist in D1:', err);
+      throw new Error('Database operation failed.');
+    });
+}
+
+// Account (Twitter) operations
+
+let accounts: Account[] = [];
+
+const cloneAccount = (account: Account): Account => ({ ...account });
+
+function rowToAccount(row: Record<string, unknown>): Account {
+  return {
+    id: row.id as string,
+    handle: row.handle as string,
+    lastReadAt: (row.last_read_at as string) || null,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  };
+}
+
+export function resetAccounts(nextAccounts: Account[] = []): void {
+  accounts = nextAccounts.map(cloneAccount);
+}
+
+export function listAccounts(db?: D1Database): Account[] | Promise<Account[]> {
+  if (!db) {
+    return accounts.map(cloneAccount);
+  }
+  return db
+    .prepare('SELECT * FROM twitter_accounts ORDER BY created_at DESC')
+    .all<Record<string, unknown>>()
+    .then((result) => result.results.map(rowToAccount))
+    .catch((err) => {
+      console.error('Failed to list accounts from D1:', err);
+      throw new Error('Database operation failed.');
+    });
+}
+
+export function findAccountByHandle(
+  db: D1Database | undefined,
+  handle: string,
+  excludeId?: string
+): Account | null | Promise<Account | null> {
+  const key = handleKey(handle);
+  if (!db) {
+    const found = accounts.find(
+      (account) =>
+        handleKey(account.handle) === key && account.id !== excludeId
+    );
+    return found ? cloneAccount(found) : null;
+  }
+  return db
+    .prepare(
+      'SELECT * FROM twitter_accounts WHERE handle = ? AND id != ?'
+    )
+    .bind(handle, excludeId ?? '')
+    .first<Record<string, unknown>>()
+    .then((result) => (result ? rowToAccount(result) : null))
+    .catch((err) => {
+      console.error('Failed to find account in D1:', err);
+      throw new Error('Database operation failed.');
+    });
+}
+
+export function createAccount(
+  db: D1Database | undefined,
+  input: CreateAccountInput
+): Account | Promise<Account> {
+  const handle = normalizeHandle(input.handle);
+  if (!handle) {
+    throw new Error('Invalid handle.');
+  }
+
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+  const account: Account = {
+    id,
+    handle,
+    lastReadAt: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  if (!db) {
+    const exists = accounts.some(
+      (a) => handleKey(a.handle) === handleKey(handle)
+    );
+    if (exists) {
+      throw new Error('Handle already exists.');
+    }
+    accounts = [account, ...accounts];
+    return cloneAccount(account);
+  }
+
+  return db
+    .prepare(
+      'INSERT INTO twitter_accounts (id, handle, last_read_at, created_at, updated_at) VALUES (?, ?, NULL, ?, ?)'
+    )
+    .bind(id, handle, now, now)
+    .run()
+    .then(() => cloneAccount(account))
+    .catch((err) => {
+      if (
+        err instanceof Error &&
+        err.message.includes('UNIQUE constraint')
+      ) {
+        throw new Error('Handle already exists.');
+      }
+      console.error('Failed to create account in D1:', err);
+      throw new Error('Database operation failed.');
+    });
+}
+
+export function updateAccount(
+  db: D1Database | undefined,
+  id: string,
+  input: UpdateAccountInput
+): Account | null | Promise<Account | null> {
+  const handle =
+    typeof input.handle === 'string' ? normalizeHandle(input.handle) : undefined;
+  if (input.handle !== undefined && !handle) {
+    throw new Error('Invalid handle.');
+  }
+
+  if (!db) {
+    const index = accounts.findIndex((account) => account.id === id);
+    if (index < 0) return null;
+
+    const current = accounts[index];
+    const next: Account = {
+      ...current,
+      handle: handle ?? current.handle,
+      lastReadAt:
+        input.lastReadAt !== undefined ? input.lastReadAt : current.lastReadAt,
+      updatedAt: new Date().toISOString(),
+    };
+    accounts = [...accounts.slice(0, index), next, ...accounts.slice(index + 1)];
+    return cloneAccount(next);
+  }
+
+  const now = new Date().toISOString();
+  return db
+    .prepare(
+      `UPDATE twitter_accounts
+       SET handle = COALESCE(?, handle),
+           last_read_at = CASE WHEN ? = 1 THEN ? ELSE last_read_at END,
+           updated_at = ?
+       WHERE id = ?
+       RETURNING *`
+    )
+    .bind(
+      handle ?? null,
+      input.lastReadAt !== undefined ? 1 : 0,
+      input.lastReadAt ?? null,
+      now,
+      id
+    )
+    .first<Record<string, unknown>>()
+    .then((result) => (result ? rowToAccount(result) : null))
+    .catch((err) => {
+      console.error('Failed to update account in D1:', err);
+      throw new Error('Database operation failed.');
+    });
+}
+
+export function markAccountAsRead(
+  db: D1Database | undefined,
+  id: string
+): Account | null | Promise<Account | null> {
+  const now = new Date().toISOString();
+
+  if (!db) {
+    const index = accounts.findIndex((account) => account.id === id);
+    if (index < 0) return null;
+
+    const current = accounts[index];
+    const next: Account = { ...current, lastReadAt: now, updatedAt: now };
+    accounts = [...accounts.slice(0, index), next, ...accounts.slice(index + 1)];
+    return cloneAccount(next);
+  }
+
+  return db
+    .prepare(
+      'UPDATE twitter_accounts SET last_read_at = ?, updated_at = ? WHERE id = ? RETURNING *'
+    )
+    .bind(now, now, id)
+    .first<Record<string, unknown>>()
+    .then((result) => (result ? rowToAccount(result) : null))
+    .catch((err) => {
+      console.error('Failed to mark account as read in D1:', err);
+      throw new Error('Database operation failed.');
+    });
+}
+
+export function deleteAccount(
+  db: D1Database | undefined,
+  id: string
+): boolean | Promise<boolean> {
+  if (!db) {
+    const next = accounts.filter((account) => account.id !== id);
+    if (next.length === accounts.length) return false;
+    accounts = next;
+    return true;
+  }
+
+  return db
+    .prepare('DELETE FROM twitter_accounts WHERE id = ?')
+    .bind(id)
+    .run()
+    .then((result) => result.meta.changes > 0)
+    .catch((err) => {
+      console.error('Failed to delete account from D1:', err);
       throw new Error('Database operation failed.');
     });
 }

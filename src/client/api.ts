@@ -1,4 +1,9 @@
 import type {
+  CreateAccountInput,
+  Account,
+  UpdateAccountInput,
+} from '../shared/account';
+import type {
   CreateChecklistInput,
   CreateChecklistItemInput,
   Checklist,
@@ -120,6 +125,28 @@ export const taskApi = {
   remove: (id: string) =>
     request<void>(`/api/tasks/${id}`, {
       method: 'DELETE',
+    }),
+};
+
+export const accountApi = {
+  list: () => request<Account[]>('/api/accounts'),
+  create: (input: CreateAccountInput) =>
+    request<Account>('/api/accounts', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  update: (id: string, input: UpdateAccountInput) =>
+    request<Account>(`/api/accounts/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }),
+  remove: (id: string) =>
+    request<void>(`/api/accounts/${id}`, {
+      method: 'DELETE',
+    }),
+  markAsRead: (id: string) =>
+    request<Account>(`/api/accounts/${id}/mark-as-read`, {
+      method: 'POST',
     }),
 };
 
