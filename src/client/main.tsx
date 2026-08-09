@@ -394,7 +394,6 @@ function App() {
                 <Button
                   variant="ghost"
                   size="xs"
-                  className="hidden md:inline-flex"
                   onClick={() => setShowCompleted(!showCompleted)}
                 >
                   {showCompleted ? '完了を隠す' : '完了を表示'}
