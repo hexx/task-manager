@@ -1,6 +1,6 @@
 ---
 title: "モバイルで完了タスクの表示切替（完了を表示）を使えるようにする"
-status: TODO
+status: DONE
 created: 2026-08-10T00:28:00+09:00
 ---
 
@@ -45,9 +45,9 @@ created: 2026-08-10T00:28:00+09:00
 - なし（未着手）。仕様は `docs/mobile-show-completed-spec.md` に確定済み（grill-with-docs セッション 2026-08-10 合意）。
 
 ## 解決すべきゴール (Goal)
-- [ ] 「完了を表示」ボタンを `md` 未満でもヘッダー右側に常時表示する（`hidden md:inline-flex` を外す）
-- [ ] デスクトップ（`md` 以上）の見た目・挙動を変えない
-- [ ] 既存のテスト・型チェック・lint を壊さない
+- [x] 「完了を表示」ボタンを `md` 未満でもヘッダー右側に常時表示する（`hidden md:inline-flex` を外す）
+- [x] デスクトップ（`md` 以上）の見た目・挙動を変えない
+- [x] 既存のテスト・型チェック・lint を壊さない
 
 ### 完了条件（検証方法）
 - 375px 幅で「完了を表示」ボタンが表示され、タップで完了タスクの表示/非表示が切り替わること
@@ -55,5 +55,7 @@ created: 2026-08-10T00:28:00+09:00
 
 ## 補足
 - 経緯: 2026-08-10 の grill-with-docs セッションで仕様確定。バグ扱い（導入時 issue `issues/issue-202606272227.md` にモバイル除外の意図は記録なし）。
-- 仕様書: `docs/mobile-show-completed-spec.md`
+- 実装: commit `9588cae`（PR #117、2026-08-10 マージ）で `hidden md:inline-flex` を除去。
+- 仕様書: `docs/mobile-show-completed-spec.md`（2026-08-22 の grill-with-docs セッションで v2 に改訂）。
+- 後続 issue: `issues/issue-202608221305-mobile-completed-tasks-section.md`（モバイルのトグルは発見できないというフィードバックを受け、導線をリスト末尾の開閉セクションに置き換える。本イシューの実装そのものは完了済みのため DONE にする）。
 - 関連 TODO: `issues/issue-202607281142-mobile-task-row-layout.md`（モバイルのタスク行の窮屈さ。本イシューとは独立）
