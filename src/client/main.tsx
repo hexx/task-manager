@@ -54,6 +54,77 @@ function DeadlineLabel({ deadline, completed }: { deadline: string; completed: b
   );
 }
 
+function TaskRow({
+  task,
+  folders,
+  onToggle,
+  onDeadline,
+  onMove,
+  onRemove,
+}: {
+  task: Task;
+  folders: Folder[];
+  onToggle: (task: Task) => void;
+  onDeadline: (task: Task, value: string) => void;
+  onMove: (task: Task, folderId: string | null) => void;
+  onRemove: (taskId: string) => void;
+}) {
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <Checkbox
+          checked={task.completed}
+          aria-label={`Mark "${task.title}" as ${
+            task.completed ? 'incomplete' : 'complete'
+          }`}
+          onCheckedChange={() => void onToggle(task)}
+        />
+        <span
+          className={
+            task.completed
+              ? 'text-muted-foreground line-through'
+              : undefined
+          }
+        >
+          {task.title}
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        {task.deadline ? (
+          <DeadlineLabel deadline={task.deadline} completed={task.completed} />
+        ) : null}
+        <input
+          type="date"
+          aria-label={`Deadline for "${task.title}"`}
+          value={task.deadline ?? ''}
+          onChange={(event) => void onDeadline(task, event.target.value)}
+          className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        />
+        <select
+          aria-label={`Move "${task.title}" to folder`}
+          value={task.folderId ?? ''}
+          onChange={(event) => void onMove(task, event.target.value || null)}
+          className="h-8 max-w-[12rem] truncate rounded-lg border border-input bg-transparent px-2 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <option value="">未分類</option>
+          {folders.map((folder) => (
+            <option key={folder.id} value={folder.id}>
+              {folder.name}
+            </option>
+          ))}
+        </select>
+        <Button
+          variant="destructive"
+          size="icon-sm"
+          onClick={() => void onRemove(task.id)}
+        >
+          <Trash2Icon />
+        </Button>
+      </div>
+    </li>
+  );
+}
+
 function App() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [allTasks, setAllTasks] = useState<Task[]>([]);
@@ -67,6 +138,9 @@ function App() {
   const [submitting, setSubmitting] = useState(false);
   const [showFolderForm, setShowFolderForm] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
+  // モバイルの完了タスクセクション開閉（docs/mobile-show-completed-spec.md v2）。
+  // デスクトップの showCompleted とは独立。セッション内のみ保持。
+  const [showCompletedSection, setShowCompletedSection] = useState(false);
   const [view, setView] = useState<View>('tasks');
 
   const tasks = useMemo(() => {
@@ -85,6 +159,16 @@ function App() {
   const visibleTasks = useMemo(
     () => (showCompleted ? tasks : tasks.filter((task) => !task.completed)),
     [tasks, showCompleted]
+  );
+  // モバイル: 一覧は常に未完了一覧を出し、完了 Task は末尾の開閉セクションに分ける。
+  // デスクトップ: visibleTasks（トグル駆動）をそのまま使う。
+  const incompleteTasks = useMemo(
+    () => tasks.filter((task) => !task.completed),
+    [tasks]
+  );
+  const completedTasks = useMemo(
+    () => tasks.filter((task) => task.completed),
+    [tasks]
   );
 
   async function loadFolders() {
@@ -394,6 +478,7 @@ function App() {
                 <Button
                   variant="ghost"
                   size="xs"
+                  className="hidden md:inline-flex"
                   onClick={() => setShowCompleted(!showCompleted)}
                 >
                   {showCompleted ? '完了を隠す' : '完了を表示'}
@@ -451,75 +536,72 @@ function App() {
               </p>
             ) : null}
 
-            <ul className="flex flex-col gap-2">
-              {visibleTasks.map((task) => (
-                <li
+            {/* Mobile task list: incomplete only (completed live in the collapsible section below) */}
+            <ul className="flex flex-col gap-2 md:hidden">
+              {incompleteTasks.map((task) => (
+                <TaskRow
                   key={task.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <Checkbox
-                      checked={task.completed}
-                      aria-label={`Mark "${task.title}" as ${
-                        task.completed ? 'incomplete' : 'complete'
-                      }`}
-                      onCheckedChange={() => void toggleTask(task)}
-                    />
-                    <span
-                      className={
-                        task.completed
-                          ? 'text-muted-foreground line-through'
-                          : undefined
-                      }
-                    >
-                      {task.title}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {task.deadline ? (
-                      <DeadlineLabel
-                        deadline={task.deadline}
-                        completed={task.completed}
-                      />
-                    ) : null}
-                    <input
-                      type="date"
-                      aria-label={`Deadline for "${task.title}"`}
-                      value={task.deadline ?? ''}
-                      onChange={(event) =>
-                        void updateDeadline(task, event.target.value)
-                      }
-                      className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                    />
-                    <select
-                      aria-label={`Move "${task.title}" to folder`}
-                      value={task.folderId ?? ''}
-                      onChange={(event) =>
-                        void moveTaskToFolder(
-                          task,
-                          event.target.value || null
-                        )
-                      }
-                      className="h-8 max-w-[12rem] truncate rounded-lg border border-input bg-transparent px-2 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                    >
-                      <option value="">未分類</option>
-                      {folders.map((folder) => (
-                        <option key={folder.id} value={folder.id}>
-                          {folder.name}
-                        </option>
-                      ))}
-                    </select>
-                    <Button
-                      variant="destructive"
-                      size="icon-sm"
-                      onClick={() => void removeTask(task.id)}
-                    >
-                      <Trash2Icon />
-                    </Button>
-                  </div>
-                </li>
+                  task={task}
+                  folders={folders}
+                  onToggle={toggleTask}
+                  onDeadline={updateDeadline}
+                  onMove={moveTaskToFolder}
+                  onRemove={removeTask}
+                />
               ))}
             </ul>
+
+            {/* Desktop task list: toggle-driven (unchanged behavior) */}
+            <ul className="hidden md:flex md:flex-col md:gap-2">
+              {visibleTasks.map((task) => (
+                <TaskRow
+                  key={task.id}
+                  task={task}
+                  folders={folders}
+                  onToggle={toggleTask}
+                  onDeadline={updateDeadline}
+                  onMove={moveTaskToFolder}
+                  onRemove={removeTask}
+                />
+              ))}
+            </ul>
+
+            {/* Mobile completed tasks section (docs/mobile-show-completed-spec.md v2) */}
+            {completedCount > 0 ? (
+              <button
+                type="button"
+                aria-expanded={showCompletedSection}
+                onClick={() => setShowCompletedSection(!showCompletedSection)}
+                className="flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors hover:bg-muted md:hidden"
+              >
+                <span>
+                  {showCompletedSection
+                    ? `完了したタスク ${completedCount} 件を隠す`
+                    : `完了したタスク ${completedCount} 件を表示`}
+                </span>
+                <ChevronDownIcon
+                  className={cn(
+                    'size-4 shrink-0 text-muted-foreground transition-transform duration-300',
+                    showCompletedSection && 'rotate-180'
+                  )}
+                />
+              </button>
+            ) : null}
+            {showCompletedSection && completedTasks.length > 0 ? (
+              <ul className="flex flex-col gap-2 md:hidden">
+                {completedTasks.map((task) => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    folders={folders}
+                    onToggle={toggleTask}
+                    onDeadline={updateDeadline}
+                    onMove={moveTaskToFolder}
+                    onRemove={removeTask}
+                  />
+                ))}
+              </ul>
+            ) : null}
           </CardContent>
         </Card>
         <FolderPickerSheet
