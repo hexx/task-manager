@@ -57,6 +57,7 @@ function DeadlineLabel({ deadline, completed }: { deadline: string; completed: b
 function TaskRow({
   task,
   folders,
+  pendingToggle,
   onToggle,
   onDeadline,
   onMove,
@@ -64,6 +65,7 @@ function TaskRow({
 }: {
   task: Task;
   folders: Folder[];
+  pendingToggle: boolean;
   onToggle: (task: Task) => void;
   onDeadline: (task: Task, value: string) => void;
   onMove: (task: Task, folderId: string | null) => void;
@@ -74,6 +76,7 @@ function TaskRow({
       <div className="flex min-w-0 items-center gap-3">
         <Checkbox
           checked={task.completed}
+          disabled={pendingToggle}
           aria-label={`Mark "${task.title}" as ${
             task.completed ? 'incomplete' : 'complete'
           }`}
@@ -138,9 +141,14 @@ function App() {
   const [submitting, setSubmitting] = useState(false);
   const [showFolderForm, setShowFolderForm] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
-  // モバイルの完了タスクセクション開閉（docs/mobile-show-completed-spec.md v2）。
+  // モバイルの完了タスクセクション開閉（docs/mobile-show-completed-spec.md v3）。
   // デスクトップの showCompleted とは独立。セッション内のみ保持。
   const [showCompletedSection, setShowCompletedSection] = useState(false);
+  // 完了トグルの楽観的更新（docs/mobile-show-completed-spec.md v3 第5節）。
+  // PATCH 応答待ちの Task ID を保持し、同一 Task のチェックボックスのみ保留ガードする。
+  const [pendingToggles, setPendingToggles] = useState<Set<string>>(
+    () => new Set()
+  );
   const [view, setView] = useState<View>('tasks');
 
   const tasks = useMemo(() => {
@@ -254,11 +262,41 @@ function App() {
 
   async function toggleTask(task: Task) {
     setError(null);
+    const nextCompleted = !task.completed;
+    // 楽観的更新（v3 第5節）: サーバー応答を待たずに即時反映する。
+    // loadTasks() を呼ばないため「Loading tasks…」は出現しない。
+    setAllTasks((prev) =>
+      prev.map((t) =>
+        t.id === task.id ? { ...t, completed: nextCompleted } : t
+      )
+    );
+    // 保留ガード（v3 5.2）: 同一 Task の PATCH 応答まで、その Task のみ無効化。
+    setPendingToggles((prev) => new Set(prev).add(task.id));
     try {
-      await taskApi.update(task.id, { completed: !task.completed });
-      await loadTasks();
+      const updated = await taskApi.update(task.id, {
+        completed: nextCompleted,
+      });
+      // 成功: 全件再取得はせず、変更したフィールドだけをマージする。
+      // 応答中の並行編集（期限・Folder 移動など）を上書きしないため、Task 全体は置き換えない。
+      setAllTasks((prev) =>
+        prev.map((t) =>
+          t.id === task.id ? { ...t, completed: updated.completed } : t
+        )
+      );
     } catch (err) {
+      // 失敗: トグルを巻き戻し、共通エラー表示に出す（v3 5.3）。
+      setAllTasks((prev) =>
+        prev.map((t) =>
+          t.id === task.id ? { ...t, completed: task.completed } : t
+        )
+      );
       setError(err instanceof Error ? err.message : 'Failed to update task.');
+    } finally {
+      setPendingToggles((prev) => {
+        const next = new Set(prev);
+        next.delete(task.id);
+        return next;
+      });
     }
   }
 
@@ -543,6 +581,7 @@ function App() {
                   key={task.id}
                   task={task}
                   folders={folders}
+                  pendingToggle={pendingToggles.has(task.id)}
                   onToggle={toggleTask}
                   onDeadline={updateDeadline}
                   onMove={moveTaskToFolder}
@@ -558,6 +597,7 @@ function App() {
                   key={task.id}
                   task={task}
                   folders={folders}
+                  pendingToggle={pendingToggles.has(task.id)}
                   onToggle={toggleTask}
                   onDeadline={updateDeadline}
                   onMove={moveTaskToFolder}
@@ -566,7 +606,7 @@ function App() {
               ))}
             </ul>
 
-            {/* Mobile completed tasks section (docs/mobile-show-completed-spec.md v2) */}
+            {/* Mobile completed tasks section (docs/mobile-show-completed-spec.md v3) */}
             {completedCount > 0 ? (
               <button
                 type="button"
@@ -594,6 +634,7 @@ function App() {
                     key={task.id}
                     task={task}
                     folders={folders}
+                    pendingToggle={pendingToggles.has(task.id)}
                     onToggle={toggleTask}
                     onDeadline={updateDeadline}
                     onMove={moveTaskToFolder}
