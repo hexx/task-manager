@@ -174,4 +174,40 @@ describe('task API', () => {
     const listed = (await listResponse.json()) as { id: string }[];
     expect(listed.map((task) => task.id)).toContain(created.id);
   });
+
+  it('creates tasks with the errand flag and defaults to false', async () => {
+    const errandResponse = await app.request('http://localhost/api/tasks', {
+      method: 'POST',
+      body: JSON.stringify({ title: 'Buy milk', errand: true })
+    });
+    expect(errandResponse.status).toBe(201);
+    const errand = (await errandResponse.json()) as { id: string; errand: boolean };
+    expect(errand.errand).toBe(true);
+
+    const normalResponse = await app.request('http://localhost/api/tasks', {
+      method: 'POST',
+      body: JSON.stringify({ title: 'Write report' })
+    });
+    expect(normalResponse.status).toBe(201);
+    expect(((await normalResponse.json()) as { errand: boolean }).errand).toBe(false);
+  });
+
+  it('does not change the errand flag via PATCH (docs/errand-spec.md §5)', async () => {
+    const createResponse = await app.request('http://localhost/api/tasks', {
+      method: 'POST',
+      body: JSON.stringify({ title: 'Buy milk', errand: true })
+    });
+    const created = (await createResponse.json()) as { id: string };
+
+    const patchResponse = await app.request(
+      `http://localhost/api/tasks/${created.id}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ errand: false })
+      }
+    );
+    expect(patchResponse.status).toBe(200);
+    // サーバーは errand を受け取らないため、変更されない（v1 では変更経路なし）
+    expect(((await patchResponse.json()) as { errand: boolean }).errand).toBe(true);
+  });
 });
