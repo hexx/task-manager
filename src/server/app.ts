@@ -108,12 +108,15 @@ api.post('/tasks', async (c) => {
     title?: unknown;
     folderId?: unknown;
     deadline?: unknown;
+    errand?: unknown;
   } | null;
   const title = typeof body?.title === 'string' ? body.title : '';
   const folderId =
     typeof body?.folderId === 'string' ? body.folderId : null;
   const deadline =
     typeof body?.deadline === 'string' ? body.deadline : undefined;
+  const errand =
+    typeof body?.errand === 'boolean' ? body.errand : false;
 
   if (!title.trim()) {
     return c.json({ message: 'Task title is required.' }, 400);
@@ -123,7 +126,7 @@ api.post('/tasks', async (c) => {
     return c.json({ message: 'Deadline must be a YYYY-MM-DD date.' }, 400);
   }
 
-  const result = createTask(c.env?.DB, { title, folderId, deadline });
+  const result = createTask(c.env?.DB, { title, folderId, deadline, errand });
   return c.json(result instanceof Promise ? await result : result, 201);
 });
 

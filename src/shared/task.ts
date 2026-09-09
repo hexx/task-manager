@@ -11,6 +11,7 @@ export interface Task {
   completed: boolean;
   folderId: string | null;
   deadline: string | null;
+  errand: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -27,6 +28,7 @@ export interface CreateTaskInput {
   title: string;
   folderId?: string | null;
   deadline?: string;
+  errand?: boolean;
 }
 
 export interface UpdateTaskInput {

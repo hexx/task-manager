@@ -48,6 +48,7 @@ function rowToTask(row: Record<string, unknown>): Task {
     completed: Boolean(row.completed),
     folderId: (row.folder_id as string) || null,
     deadline: (row.deadline as string) || null,
+    errand: Boolean(row.errand),
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -219,6 +220,7 @@ export function createTask(
   const id = crypto.randomUUID();
   const folderId = input.folderId ?? null;
   const deadline = input.deadline ?? null;
+  const errand = input.errand ?? false;
   const now = new Date().toISOString();
 
   if (!db) {
@@ -228,6 +230,7 @@ export function createTask(
       completed: false,
       folderId,
       deadline,
+      errand,
       createdAt: now,
       updatedAt: now,
     };
@@ -237,9 +240,9 @@ export function createTask(
 
   return db
     .prepare(
-      'INSERT INTO tasks (id, title, completed, folder_id, deadline, created_at, updated_at) VALUES (?, ?, 0, ?, ?, ?, ?)'
+      'INSERT INTO tasks (id, title, completed, folder_id, deadline, errand, created_at, updated_at) VALUES (?, ?, 0, ?, ?, ?, ?, ?)'
     )
-    .bind(id, title, folderId, deadline, now, now)
+    .bind(id, title, folderId, deadline, errand ? 1 : 0, now, now)
     .run()
     .then(() => ({
       id,
@@ -247,6 +250,7 @@ export function createTask(
       completed: false,
       folderId,
       deadline,
+      errand,
       createdAt: now,
       updatedAt: now,
     }))

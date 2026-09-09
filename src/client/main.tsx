@@ -33,10 +33,11 @@ import {
   type FolderSelection,
 } from './FolderPickerSheet';
 import { ChecklistsView } from './ChecklistsView';
+import { ErrandsView } from './ErrandsView';
 import { TwitterView } from './TwitterView';
 import './styles.css';
 
-type View = 'tasks' | 'checklists' | 'twitter';
+type View = 'tasks' | 'errands' | 'checklists' | 'twitter';
 
 function DeadlineLabel({ deadline, completed }: { deadline: string; completed: boolean }) {
   const display = formatDeadline(deadline);
@@ -152,12 +153,20 @@ function App() {
   const [view, setView] = useState<View>('tasks');
 
   const tasks = useMemo(() => {
-    if (selection.type === 'all') return allTasks;
+    // Errand は Task タブに表示しない（docs/errand-spec.md §3.5）
+    if (selection.type === 'all') {
+      return allTasks.filter((task) => !task.errand);
+    }
     if (selection.type === 'unclassified') {
-      return allTasks.filter((task) => task.folderId === null);
+      return allTasks.filter((task) => !task.errand && task.folderId === null);
     }
     return allTasks.filter((task) => task.folderId === selection.id);
   }, [allTasks, selection]);
+
+  const errandTasks = useMemo(
+    () => allTasks.filter((task) => task.errand),
+    [allTasks]
+  );
 
   const totalCount = tasks.length;
   const completedCount = useMemo(
@@ -233,6 +242,18 @@ function App() {
       setError(err instanceof Error ? err.message : 'Failed to create task.');
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  // お出かけタブ用: errand = true で作成する（docs/errand-spec.md §3.2）。
+  async function handleErrandCreate(title: string) {
+    setError(null);
+    try {
+      await taskApi.create({ title, errand: true });
+      await loadTasks();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create task.');
+      throw err;
     }
   }
 
@@ -383,6 +404,19 @@ function App() {
           <button
             type="button"
             role="tab"
+            aria-selected={view === 'errands'}
+            className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
+              view === 'errands'
+                ? 'bg-background font-medium shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+            onClick={() => setView('errands')}
+          >
+            お出かけ
+          </button>
+          <button
+            type="button"
+            role="tab"
             aria-selected={view === 'checklists'}
             className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
               view === 'checklists'
@@ -408,7 +442,21 @@ function App() {
           </button>
         </div>
 
-        {view === 'checklists' ? <ChecklistsView /> : view === 'twitter' ? <TwitterView /> : (
+        {view === 'checklists' ? (
+          <ChecklistsView />
+        ) : view === 'twitter' ? (
+          <TwitterView />
+        ) : view === 'errands' ? (
+          <ErrandsView
+            tasks={errandTasks}
+            pendingToggles={pendingToggles}
+            loading={loading}
+            error={error}
+            onToggle={toggleTask}
+            onRemove={removeTask}
+            onCreate={handleErrandCreate}
+          />
+        ) : (
         <div className="flex w-full flex-col gap-4 md:flex-row">
         {/* Folder sidebar - desktop only */}
         <Card className="hidden w-56 shrink-0 md:flex">

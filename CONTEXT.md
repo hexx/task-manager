@@ -8,15 +8,19 @@
 一度きりの用事を表す、使い切りのToDo。完了すると消費される。
 _Avoid_: checklist item
 
+**Errand**:
+外出先で行う一度きりの用事。買い物を含む。実体は Task の一種であり、`errand` フラグが true の Task を指す。Folder も Deadline も持たず、お出かけタブにのみ表示され、Task タブの絞り込み（すべて・未分類）には現れない。
+_Avoid_: 買い物リスト, お出かけリスト, shopping task
+
 **Folder**:
 Task を分類するための入れ物。Checklist は Folder に属さず、Task と並列の独立したセクションとして扱う。
 
 **All**:
-Folder への所属に関係なく、すべての Task を表示する絞り込み条件。Folder そのものではない。UI 上の表記は「すべて」。
+Errand を除くすべての Task を表示する絞り込み条件。Folder そのものではない。UI 上の表記は「すべて」。
 _Avoid_: All tasks, All, インボックス
 
 **Unclassified**:
-どの Folder にも属していない Task のこと、およびそれだけを一覧する絞り込み条件。Folder そのものではないが、現実に存在する所属先であり、移動先としても選べる。UI 上の表記は「未分類」。
+どの Folder にも属しておらず、Errand でもない Task のこと、およびそれだけを一覧する絞り込み条件。Folder そのものではないが、現実に存在する所属先であり、移動先としても選べる。UI 上の表記は「未分類」。
 _Avoid_: フォルダなし, 無所属
 
 **Checklist**:
